@@ -1,0 +1,35 @@
+package com.photosoup.model;
+
+import java.io.File;
+import java.time.Duration;
+import java.time.LocalDateTime;
+
+public class SourcePhoto {
+    private File file;
+    private LocalDateTime dateTime;
+    private Duration offset;
+
+    public File getFile() {
+        return file;
+    }
+
+    public void setFile(File file) {
+        this.file = file;
+    }
+
+    public LocalDateTime getDateTime() {
+        return dateTime;
+    }
+
+    public void setDateTime(LocalDateTime dateTime) {
+        this.dateTime = dateTime;
+    }
+
+    public Duration getOffset() {
+        return offset;
+    }
+
+    public void setOffset(Duration offset) {
+        this.offset = offset;
+    }
+}
