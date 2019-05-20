@@ -1,4 +1,4 @@
-#PhotoSoup
+# PhotoSoup
 
 PhotoSoup is made to merge photos from several sources with potentially wrong timezones to one clean directory.
 In concrete terms, it:
