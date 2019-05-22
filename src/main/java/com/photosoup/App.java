@@ -1,5 +1,15 @@
 package com.photosoup;
 
+import com.drew.imaging.FileType;
+import com.drew.imaging.FileTypeDetector;
+import com.drew.imaging.ImageMetadataReader;
+import com.drew.imaging.ImageProcessingException;
+import com.drew.metadata.Directory;
+import com.drew.metadata.Metadata;
+import com.drew.metadata.exif.ExifSubIFDDescriptor;
+import com.drew.metadata.exif.ExifSubIFDDirectory;
+import com.drew.metadata.mov.QuickTimeDirectory;
+import com.drew.metadata.mov.metadata.QuickTimeMetadataDirectory;
 import com.photosoup.dto.ConfigurationDTO;
 import com.photosoup.dto.SourceDTO;
 import com.photosoup.model.SourceFolder;
@@ -23,7 +33,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class App {
-    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("''yyyy:MM:dd HH:mm:ss''");
+    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy:MM:dd HH:mm:ss");
+    private static final DateTimeFormatter TZ_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssZ");
 
     private static void printTagValue(final JpegImageMetadata jpegMetadata,
                                       final TagInfo tagInfo) {
@@ -70,7 +81,7 @@ public class App {
         try {
             for (int i = 0; i < sortedPhotos.size(); i++) {
                 final SourcePhoto original = sortedPhotos.get(i);
-                final String copiedName = String.format("%s%05d.%s", configuration.getPrefix(), i, FilenameUtils.getExtension(original.getFile().getName()));
+                final String copiedName = String.format("%s%05d.%s", configuration.getPrefix(), i, getExtension(original.getFile()));
                 final File copied = new File(configuration.getOutput(), copiedName);
                 FileUtils.copyFile(original.getFile(), copied);
             }
@@ -79,17 +90,23 @@ public class App {
         }
     }
 
+    private String getExtension(File file) {
+        return FilenameUtils.getExtension(file.getName());
+    }
+
     private List<SourceFolder> indexesPhotos(ConfigurationDTO configurationDTO) {
         final List<SourceFolder> result = new ArrayList<>();
         configurationDTO.getSources().forEach(sourceDTO -> {
             final SourceFolder sourceFolder = new SourceFolder();
             sourceFolder.setFolder(sourceDTO.getFolder());
             for (File photo : sourceDTO.getFolder().listFiles()) {
-                final SourcePhoto sourcePhoto = new SourcePhoto();
-                sourcePhoto.setFile(photo);
-                sourcePhoto.setOffset(sourceDTO.getOffset());
-                sourcePhoto.setDateTime(extractDateTime(photo).plus(sourceDTO.getOffset()));
-                sourceFolder.getPhotos().add(sourcePhoto);
+                if (!photo.getName().startsWith(".")) {
+                    final SourcePhoto sourcePhoto = new SourcePhoto();
+                    sourcePhoto.setFile(photo);
+                    sourcePhoto.setOffset(sourceDTO.getOffset());
+                    sourcePhoto.setDateTime(extractDateTime(photo).plus(sourceDTO.getOffset()));
+                    sourceFolder.getPhotos().add(sourcePhoto);
+                }
             }
             result.add(sourceFolder);
         });
@@ -98,17 +115,36 @@ public class App {
 
     private LocalDateTime extractDateTime(File photo) {
         try {
-            final ImageMetadata metadata = Imaging.getMetadata(photo);
-            if (metadata instanceof JpegImageMetadata) {
-                final JpegImageMetadata jpegMetadata = (JpegImageMetadata) metadata;
-                final TiffField field = jpegMetadata.findEXIFValueWithExactMatch(ExifTagConstants.EXIF_TAG_DATE_TIME_ORIGINAL);
-                return LocalDateTime.parse(field.getValueDescription(), FORMATTER);
-            } else {
-                throw new IllegalStateException("Not supported");
+            final Metadata metadata = ImageMetadataReader.readMetadata(photo);
+//            metadata.addDirectory();
+
+            final ExifSubIFDDirectory exifDirectory = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory.class);
+            if (exifDirectory != null) {
+                final String value = exifDirectory.getString(ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL);
+                return LocalDateTime.parse(value, FORMATTER);
             }
-        } catch (ImageReadException | IOException e) {
+            final QuickTimeMetadataDirectory quickTimeDirectory = metadata.getFirstDirectoryOfType(QuickTimeMetadataDirectory.class);
+            if (quickTimeDirectory != null) {
+                final String value = quickTimeDirectory.getString(1286);
+                return LocalDateTime.parse(value, TZ_FORMATTER);
+            }
+            throw new IllegalStateException(String.format("Unsuported file: %s", getExtension(photo)));
+        } catch (IOException | ImageProcessingException e) {
             throw new RuntimeException(e);
         }
+
+//        try {
+//            final ImageMetadata metadata = Imaging.getMetadata(photo);
+//            if (metadata instanceof JpegImageMetadata) {
+//                final JpegImageMetadata jpegMetadata = (JpegImageMetadata) metadata;
+//                final TiffField field = jpegMetadata.findEXIFValueWithExactMatch(ExifTagConstants.EXIF_TAG_DATE_TIME_ORIGINAL);
+//                return LocalDateTime.parse(field.getValueDescription(), FORMATTER);
+//            } else {
+//                throw new IllegalStateException("Not supported");
+//            }
+//        } catch (ImageReadException | IOException e) {
+//            throw new RuntimeException(e);
+//        }
 
     }
 }
