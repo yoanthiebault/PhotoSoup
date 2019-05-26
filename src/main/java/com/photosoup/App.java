@@ -1,28 +1,20 @@
 package com.photosoup;
 
-import com.drew.imaging.ImageMetadataReader;
-import com.drew.imaging.ImageProcessingException;
-import com.drew.metadata.Metadata;
-import com.drew.metadata.exif.ExifSubIFDDirectory;
-import com.drew.metadata.mov.metadata.QuickTimeMetadataDirectory;
 import com.photosoup.dto.ConfigurationDTO;
 import com.photosoup.dto.SourceDTO;
 import com.photosoup.model.SourceFolder;
 import com.photosoup.model.SourcePhoto;
-import org.apache.commons.imaging.formats.jpeg.JpegImageMetadata;
-import org.apache.commons.imaging.formats.tiff.TiffField;
-import org.apache.commons.imaging.formats.tiff.taginfos.TagInfo;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.FilenameUtils;
 
 import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
-import java.time.LocalDateTime;
+import java.time.Period;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
 import java.util.stream.Collectors;
 
 public class App {
@@ -77,11 +69,18 @@ public class App {
 
     private void copyPhotos(ConfigurationDTO configuration, List<SourcePhoto> sortedPhotos) {
         try {
+            final DateTimeFormatter fileNamePattern = DateTimeFormatter.ofPattern("yyyy-MM-dd HH-mm-ss");
             for (int i = 0; i < sortedPhotos.size(); i++) {
                 final SourcePhoto original = sortedPhotos.get(i);
-                final String copiedName = String.format("%s%05d.%s", configuration.getPrefix(), i, Utils.getExtension(original.getFile()));
-                final File copied = new File(configuration.getOutput(), copiedName);
+//                final String copiedName = String.format("%s%05d.%s", configuration.getPrefix(), i, Utils.getExtension(original.getFile()));
+                final File copied = Utils.findUniqueFileName(
+                        configuration.getOutput(),
+                        String.format("%s%s", configuration.getPrefix(), original.getDateTime().format(fileNamePattern)),
+                        Utils.getExtension(original.getFile()));
                 FileUtils.copyFile(original.getFile(), copied);
+                if (i%100 == 0) {
+                    System.out.println(String.format("Copied %s photos.", i+1));
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -98,7 +97,9 @@ public class App {
                     final SourcePhoto sourcePhoto = new SourcePhoto();
                     sourcePhoto.setFile(photo);
                     sourcePhoto.setOffset(sourceDTO.getOffset());
-                    sourcePhoto.setDateTime(dateHandler.extractDateTime(photo).plus(sourceDTO.getOffset()));
+                    sourcePhoto.setDateTime(sourceDTO.getOffset() != null
+                            ? PhotoDateHandler.extractDateTime(photo).plus(sourceDTO.getOffset())
+                            : PhotoDateHandler.extractDateTime(photo));
                     sourceFolder.getPhotos().add(sourcePhoto);
                 }
             }

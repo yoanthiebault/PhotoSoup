@@ -1,13 +1,13 @@
 package com.photosoup.dto;
 
 import java.io.File;
-import java.time.Duration;
+import java.time.temporal.TemporalAmount;
 
 public class SourceDTO {
     private final File folder;
-    private final Duration offset;
+    private final TemporalAmount offset;
 
-    public SourceDTO(File folder, Duration offset) {
+    public SourceDTO(File folder, TemporalAmount offset) {
         this.folder = folder;
         this.offset = offset;
     }
@@ -16,7 +16,7 @@ public class SourceDTO {
         return folder;
     }
 
-    public Duration getOffset() {
+    public TemporalAmount getOffset() {
         return offset;
     }
 }
