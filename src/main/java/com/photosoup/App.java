@@ -1,27 +1,17 @@
 package com.photosoup;
 
-import com.drew.imaging.FileType;
-import com.drew.imaging.FileTypeDetector;
 import com.drew.imaging.ImageMetadataReader;
 import com.drew.imaging.ImageProcessingException;
-import com.drew.metadata.Directory;
 import com.drew.metadata.Metadata;
-import com.drew.metadata.exif.ExifSubIFDDescriptor;
 import com.drew.metadata.exif.ExifSubIFDDirectory;
-import com.drew.metadata.mov.QuickTimeDirectory;
 import com.drew.metadata.mov.metadata.QuickTimeMetadataDirectory;
 import com.photosoup.dto.ConfigurationDTO;
 import com.photosoup.dto.SourceDTO;
 import com.photosoup.model.SourceFolder;
 import com.photosoup.model.SourcePhoto;
-import org.apache.commons.imaging.ImageReadException;
-import org.apache.commons.imaging.Imaging;
-import org.apache.commons.imaging.common.ImageMetadata;
 import org.apache.commons.imaging.formats.jpeg.JpegImageMetadata;
 import org.apache.commons.imaging.formats.tiff.TiffField;
-import org.apache.commons.imaging.formats.tiff.constants.ExifTagConstants;
 import org.apache.commons.imaging.formats.tiff.taginfos.TagInfo;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 
 import java.io.File;
@@ -30,11 +20,14 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class App {
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy:MM:dd HH:mm:ss");
     private static final DateTimeFormatter TZ_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssZ");
+    private static final Pattern DATETIME_FILE_PATTERN = Pattern.compile("(\\d{4})(\\d{2})(\\d{2})_(\\d{2})(\\d{2})(\\d{2})\\.\\w+");
 
     private static void printTagValue(final JpegImageMetadata jpegMetadata,
                                       final TagInfo tagInfo) {
@@ -115,14 +108,33 @@ public class App {
 
     private LocalDateTime extractDateTime(File photo) {
         try {
-            final Metadata metadata = ImageMetadataReader.readMetadata(photo);
 //            metadata.addDirectory();
 
-            final ExifSubIFDDirectory exifDirectory = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory.class);
-            if (exifDirectory != null) {
-                final String value = exifDirectory.getString(ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL);
+            final Matcher matcher = DATETIME_FILE_PATTERN.matcher(photo.getName());
+            if (matcher.matches()) {
+                return LocalDateTime.of(
+                        Integer.valueOf(matcher.group(1)),
+                        Integer.valueOf(matcher.group(2)),
+                        Integer.valueOf(matcher.group(3)),
+                        Integer.valueOf(matcher.group(4)),
+                        Integer.valueOf(matcher.group(5)),
+                        Integer.valueOf(matcher.group(6))
+                );
+            }
+
+            final Metadata metadata = ImageMetadataReader.readMetadata(photo);
+
+            final Collection<ExifSubIFDDirectory> exifDirectories = metadata.getDirectoriesOfType(ExifSubIFDDirectory.class);
+            if (exifDirectories.size() > 0) {
+                final String value = exifDirectories
+                        .stream()
+                        .map(exifDirectory -> exifDirectory.getString(ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL))
+                        .filter(Objects::nonNull)
+                        .findFirst()
+                        .orElseThrow(IllegalStateException::new);
                 return LocalDateTime.parse(value, FORMATTER);
             }
+
             final QuickTimeMetadataDirectory quickTimeDirectory = metadata.getFirstDirectoryOfType(QuickTimeMetadataDirectory.class);
             if (quickTimeDirectory != null) {
                 final String value = quickTimeDirectory.getString(1286);
