@@ -20,15 +20,30 @@ import java.util.stream.Collectors;
 public class App {
     private final PhotoDateHandler dateHandler = new PhotoDateHandler();
 
-    private static void printTagValue(final JpegImageMetadata jpegMetadata,
-                                      final TagInfo tagInfo) {
-        final TiffField field = jpegMetadata.findEXIFValueWithExactMatch(tagInfo);
-        if (field == null) {
-            System.out.println(tagInfo.name + ": " + "Not Found.");
-        } else {
-            System.out.println(tagInfo.name + ": "
-                    + field.getValueDescription());
-        }
+    public static void main(String[] args) {
+        App app = new App();
+        final File workingDirectory = new File("/Users/yoanthiebault/Desktop/Vietnam raw");
+        app.run(new ConfigurationDTO(
+                Arrays.asList(
+                        new SourceDTO(
+                                new File(workingDirectory, "GoPro"),
+                                Period.of(4,3,20).plus(Duration.ofHours(-1))
+                        ),
+                        new SourceDTO(
+                                new File(workingDirectory, "Yoan"),
+                                null
+                        ),
+                        new SourceDTO(
+                                new File(workingDirectory, "Manon"),
+                                null
+                        ),
+                        new SourceDTO(
+                                new File(workingDirectory, "Appareil photo"),
+                                Duration.ofHours(5).plus(Duration.ofMinutes(-10))
+                        )
+                ),
+                new File(workingDirectory, "output"),
+                "Vietnam - "));
     }
 
 
