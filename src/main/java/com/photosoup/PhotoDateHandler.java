@@ -32,7 +32,6 @@ public class PhotoDateHandler {
 
     public static LocalDateTime extractDateTime(File photo) {
         try {
-//            metadata.addDirectory();
 
             final Matcher matcher = DATETIME_FILE_PATTERN.matcher(photo.getName());
             if (matcher.matches()) {
@@ -68,25 +67,10 @@ public class PhotoDateHandler {
         } catch (IOException | ImageProcessingException e) {
             throw new RuntimeException(e);
         }
-
-//        try {
-//            final ImageMetadata metadata = Imaging.getMetadata(photo);
-//            if (metadata instanceof JpegImageMetadata) {
-//                final JpegImageMetadata jpegMetadata = (JpegImageMetadata) metadata;
-//                final TiffField field = jpegMetadata.findEXIFValueWithExactMatch(ExifTagConstants.EXIF_TAG_DATE_TIME_ORIGINAL);
-//                return LocalDateTime.parse(field.getValueDescription(), FORMATTER);
-//            } else {
-//                throw new IllegalStateException("Not supported");
-//            }
-//        } catch (ImageReadException | IOException e) {
-//            throw new RuntimeException(e);
-//        }
-
     }
 
     static void updateExif(File file, File dst, LocalDateTime dateTime) {
         try {
-            // note that metadata might be null if no metadata is found.
             final ImageMetadata metadata = Imaging.getMetadata(file);
 
             final JpegImageMetadata jpegMetadata = (JpegImageMetadata) metadata;
