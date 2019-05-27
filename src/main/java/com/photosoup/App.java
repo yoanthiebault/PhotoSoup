@@ -92,7 +92,12 @@ public class App {
                         configuration.getOutput(),
                         String.format("%s%s", configuration.getPrefix(), original.getDateTime().format(fileNamePattern)),
                         Utils.getExtension(original.getFile()));
-                FileUtils.copyFile(original.getFile(), copied);
+                if (original.getOffset() != null) {
+                    PhotoDateHandler.updateExif(original.getFile(), copied, original.getDateTime());
+                } else {
+                    FileUtils.copyFile(original.getFile(), copied);
+                }
+
                 if (i%100 == 0) {
                     System.out.println(String.format("Copied %s photos.", i+1));
                 }

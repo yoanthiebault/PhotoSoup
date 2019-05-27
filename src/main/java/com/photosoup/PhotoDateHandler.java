@@ -5,9 +5,18 @@ import com.drew.imaging.ImageProcessingException;
 import com.drew.metadata.Metadata;
 import com.drew.metadata.exif.ExifSubIFDDirectory;
 import com.drew.metadata.mov.metadata.QuickTimeMetadataDirectory;
+import org.apache.commons.imaging.ImageReadException;
+import org.apache.commons.imaging.ImageWriteException;
+import org.apache.commons.imaging.Imaging;
+import org.apache.commons.imaging.common.ImageMetadata;
+import org.apache.commons.imaging.formats.jpeg.JpegImageMetadata;
+import org.apache.commons.imaging.formats.jpeg.exif.ExifRewriter;
+import org.apache.commons.imaging.formats.tiff.TiffImageMetadata;
+import org.apache.commons.imaging.formats.tiff.constants.ExifTagConstants;
+import org.apache.commons.imaging.formats.tiff.write.TiffOutputDirectory;
+import org.apache.commons.imaging.formats.tiff.write.TiffOutputSet;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Collection;
@@ -75,4 +84,27 @@ public class PhotoDateHandler {
 
     }
 
+    static void updateExif(File file, File dst, LocalDateTime dateTime) {
+        try {
+            // note that metadata might be null if no metadata is found.
+            final ImageMetadata metadata = Imaging.getMetadata(file);
+
+            final JpegImageMetadata jpegMetadata = (JpegImageMetadata) metadata;
+            final TiffImageMetadata exif = jpegMetadata.getExif();
+            final TiffOutputSet outputSet = exif.getOutputSet();
+
+            final TiffOutputDirectory exifDirectory = outputSet.getOrCreateExifDirectory();
+            exifDirectory.removeField(ExifTagConstants.EXIF_TAG_DATE_TIME_ORIGINAL);
+            exifDirectory.removeField(ExifTagConstants.EXIF_TAG_DATE_TIME_DIGITIZED);
+            exifDirectory.add(ExifTagConstants.EXIF_TAG_DATE_TIME_ORIGINAL, dateTime.format(FORMATTER));
+            exifDirectory.add(ExifTagConstants.EXIF_TAG_DATE_TIME_DIGITIZED, dateTime.format(FORMATTER));
+
+            try (FileOutputStream fos = new FileOutputStream(dst);
+                 OutputStream os = new BufferedOutputStream(fos)) {
+                new ExifRewriter().updateExifMetadataLossless(file, os, outputSet);
+            }
+        } catch (ImageReadException | IOException | ImageWriteException e) {
+            throw new IllegalStateException(e);
+        }
+    }
 }
