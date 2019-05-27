@@ -9,6 +9,7 @@ import org.apache.commons.io.FileUtils;
 import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.time.Period;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -27,7 +28,9 @@ public class App {
                 Arrays.asList(
                         new SourceDTO(
                                 new File(workingDirectory, "GoPro"),
-                                Period.of(4,3,20).plus(Duration.ofHours(-1))
+                                Duration.between(
+                                        LocalDateTime.of(2015,1,12,8,53,0),
+                                        LocalDateTime.of(2019,5,2,7,53,0))
                         ),
                         new SourceDTO(
                                 new File(workingDirectory, "Yoan"),
